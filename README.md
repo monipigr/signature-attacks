@@ -2,9 +2,11 @@
 
 This project provides a clear, practical and security-focused explanation of how off-chain signatures work in Ethereum and how they should be handled safely within smart contracts. It covers the most commons signature-related attacks and demonstrates how to prevent them using Solidity best practices and OpenZeppelin’s ECDSA library.
 
+Practical and security-focused project demonstrating off-chain signature handling, including signature validity checks, replay-attack prevention, and malleability mitigation using Solidity and OpenZeppelin ECDSA.
+
 ## 🤔 What are off-chain signatures and how do they work?
 
-Signatures are used by smart contracts to ensure that a specific action has been authorized by a particular user. So off-chain signatures allow a user to sign a set of data without executing any transaction on-chain. The signature itself does not perform the action; it only represents the **user’s authorization**. Later, this signed data can be submitted to the smart contract either by the signer or by another user, who then executes the action on-chain.
+Signatures are used by smart contracts to ensure that **a specific action has been authorized by a particular user**. So off-chain signatures allow a user to sign a set of data without executing any transaction on-chain. The signature itself does not perform the action; it only represents the user’s authorization. Later, this signed data can be submitted to the smart contract either by the signer or by another user, who then executes the action on-chain.
 A signature basically serves as proof that a transaction or function call has been authorized by the private key owner.
 
 A **normal transaction** in blockchain follows this flow:
@@ -24,7 +26,7 @@ An **off-chain signature transaction** follows a different logic:
 Ensuring that signatures implementation are correctly handled by smart contracts is critically important, since incorrect handling of off-chain signatures can lead to critical vulnerabilities or explotations where attackers may steal funds.
 Below are some common attacks related to off-chain signatures and how to prevent them.
 
-## ✔️ Signature validity
+## ✅ Signature validity
 
 One of the most common signature-related vulnerabilities is the **lack of proper signature validation**. Every time we use off-chain signatures, we must ensure that the signature is valid before executing any action.
 
@@ -42,9 +44,9 @@ This check is critical because attackers can deliberately pass invalid values fo
 
 A safer alternative is to use the `ECDSA` library from OpenZeppelin (e.g., inside an `authorizeUserWithECDSA()` function). This library perfoms additional validations related to elliptic curve rules, which also protects against issues such as **signature malleability**, explained in a later section.
 
-### 🔁 Replay attack
+## 🔁 Replay attack
 
-A replay attack occurs when an attacker reuses the same off-chain signature **multiple times**, even though it was intended to be used only once.
+A replay attack occurs when an attacker **reuses the same off-chain signature multiple times**, even though it was intended to be used only once.
 
 For example, if user A signs an authorization to spend 5 tokens, a malicious user could repeatedly submit that same signature to the contract. Each submission would spend another 5 tokens, leading to unexpected and unauthorized loss of funds.
 
@@ -67,23 +69,25 @@ By marking the hash as used before executing the action, we guarantee that the s
 
 ## 📈 Signature malleability
 
-Signature malleability occurs when an attacker can modify a valid signature in such a way that the altered version is still valid for the same signed action. As a result, two different signatures can authenticate the same message, both being considered valid by the smart contract.
+Signature malleability occurs when an attacker can modify a valid signature in such a way that **the altered version is still valid for the same signed action**. As a result, two different signatures can authenticate the same message, both being considered valid by the smart contract.
 
 For example:
 
 1. User A signs the message "Transfer 100 tokens" → Original valid signature → Smart contract accepts it.
 2. An attacker modifies the signature to produce an alternative but still valid signature → Smart contract also accepts it.
-   ==> Result: The action is executed twice, transferring 200 tokens when the user only intended to transfer 100.
 
-This happens because Ethereum signatures are based on elliptic curve cryptography (ECDSA), and elliptic curves are symmetric by nature.
+==> Result: The action is executed twice, transferring 200 tokens when the user only intended to transfer 100.
+
+This happens because Ethereum signatures are based on **elliptic curve cryptography** (ECDSA), and elliptic curves are **symmetric** by nature.
 For any given signature `v, r, s`, there exists another valid signature `v', r, s'` that corresponds to the same message. Without additional checks, both are cryptographically valid and recover the same signer address.
 
 To mitigate signature malleability, we must ensure that the value s lies in the **lower half of the elliptic curve**. If s is in the upper half, the signature is considered malleable and should be rejected. This is exactly how OpenZeppelin's `ECDSA` library prevents malleability internally.
 
 The verification steps typically include:
 
-1. Check that the signature length is exactly 65 bytes, because Ethereum ECDSA signatures use 65 bytes (32 bytes for `r`, 32 bytes for `s`, 1 byte for `v`)
-   `require(signature.length == 65, "Invalid signature");`
+1. Check that the signature length is **exactly 65 bytes**, because Ethereum ECDSA signatures use 65 bytes (32 bytes for `r`, 32 bytes for `s`, 1 byte for `v`)
+
+`require(signature.length == 65, "Invalid signature");`
 
 2. Extract `v`, `r` and `s` using inline assembly.
 
@@ -95,7 +99,7 @@ assembly {
 }
 ```
 
-3. Ensure that `v` is either 27 or 28 (the only valid recovery IDs in legacy Ethereum signatures)
+3. Ensure that `v` is either **27 or 28** (the only valid recovery IDs in legacy Ethereum signatures)
 
 ```solidity
 if (v != 27 && v != 28) {
@@ -103,7 +107,7 @@ if (v != 27 && v != 28) {
 }
 ```
 
-4. Ensure that `s` is within the lower half of the elliptic curve
+4. Ensure that `s` is within the **lower half** of the elliptic curve
 
 ```solidity
 if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
@@ -111,7 +115,7 @@ if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B2
 }
 ```
 
-Using OpenZeppelin’s `ECDSA` library is the safest approach, since these validations are already implemented and audited.
+Using OpenZeppelin’s `ECDSA` library is the **safest approach**, since these validations are already implemented and audited.
 
 ```solidity
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -128,11 +132,11 @@ function authorizeUserWithECDSA(bytes memory signature, bytes32 hash) external {
 
 This implementation automatically protects against signature malleability because it validates:
 
-- Signature length is 65 bytes
-- `v` is either 27 or 28
-- `s` is in the lower half of the elliptic curve
-- `signer` is not the address zero
-  ⚠️ `ECDSA.recover` does NOT protect against replay attacks. You must validate and store used hashes manually.
+- ✔️ Signature length is 65 bytes
+- ✔️ `v` is either 27 or 28
+- ✔️ `s` is in the lower half of the elliptic curve
+- ✔️ `signer` is not the address zero
+- ⚠️ `ECDSA.recover` does NOT protect against replay attacks. You must validate and store used hashes manually.
 
 ## 📚 Resources
 
