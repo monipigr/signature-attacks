@@ -39,7 +39,7 @@ contract SecureSignatureContract {
         require(signer != address(0), "Invalid signature");
 
         // Check if hash has been used before
-        require(!usedHashes[hash], "Has already used");
+        require(!usedHashes[hash], "Hash already used");
 
         // Mark hash as¡ used
         usedHashes[hash] = true;
@@ -95,5 +95,47 @@ contract SecureSignatureContract {
         authorizedUsers[user] = true;
 
         emit UserAuthorized(user, hash);
+    }
+
+    /**
+     * @dev Get the signer from a signature (secure version)
+     * @param v The v component of the signature
+     * @param r The r component of the signature
+     * @param s The s component of the signature
+     * @param hash The hash that was signed
+     * @return address The recovered signer address
+     */
+    function recoverSigner(
+        uint8 v,
+        bytes32 r,
+        bytes32 s,
+        bytes32 hash
+    ) external pure returns (address) {
+        // SECURE: Validate recover result
+        address signer = ecrecover(hash, v, r, s);
+        require(signer != address(0), "Invalid signature");
+        return signer;
+    }
+
+    /**
+     * @dev Check if a user is authorized
+     * @param user The user to check
+     * @return bool True if user is authorized
+     */
+    function isAuthorized(address user) external view returns (bool) {
+        return authorizedUsers[user];
+    }
+
+    /**
+     * @dev Create a hash for authorization
+     * @param user The user to authorize
+     * @param nonce A unique nonce
+     * @return bytes32 The hash to be signed
+     */
+    function createAuthorizationHash(
+        address user,
+        uint256 nonce
+    ) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(user, nonce));
     }
 }
