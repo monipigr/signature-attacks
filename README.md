@@ -132,11 +132,33 @@ function authorizeUserWithECDSA(bytes memory signature, bytes32 hash) external {
 
 This implementation automatically protects against signature malleability because it validates:
 
-- ✔️ Signature length is 65 bytes
-- ✔️ `v` is either 27 or 28
-- ✔️ `s` is in the lower half of the elliptic curve
-- ✔️ `signer` is not the address zero
-- ⚠️ `ECDSA.recover` does NOT protect against replay attacks. You must validate and store used hashes manually.
+✔️ Signature length is 65 bytes
+
+✔️ `v` is either 27 or 28
+
+✔️ `s` is in the lower half of the elliptic curve
+
+✔️ `signer` is not the address zero
+
+⚠️ `ECDSA.recover` does NOT protect against replay attacks. You must validate and store used hashes manually.
+
+## 🧪 Smart Contract Implementation & Tests
+
+This project includes a Solidity smart contract (`SecureSignatureContract.sol`) that implements all the security protections discussed in this guide: signature validity checks, replay-attack prevention, and signature malleability mitigation. The contract provides two verification flows — a manual ecrecover implementation and a safer OpenZeppelin-based approach — allowing developers to compare both methods.
+
+A full Foundry test suite (`SignatureAttacksTest.t.sol`) validates the behavior of the contract and confirms that:
+
+✔️ invalid or malformed signatures are correctly rejected
+
+✔️ signatures with incorrect v, r, or s values revert as expected
+
+✔️ signature malleability is mitigated by enforcing the lower-half s rule
+
+✔️ replay attacks are prevented through strict hash-reuse protection
+
+✔️ valid signatures authorize users successfully
+
+These tests provide practical, code-level validation of all the security principles explained before, serving as a reference for implementing safe off-chain signature flows in Ethereum smart contracts.
 
 ## 📚 Resources
 
